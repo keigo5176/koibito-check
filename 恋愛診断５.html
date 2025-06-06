@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>恋人診断ツール</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+      text-align: center;
+      background: #ffeef2;
+      padding: 1.5rem;
+      overflow-x: hidden;
+      word-break: break-word;
+      font-size: 16px;
+    }
+
+    .question {
+      margin: 20px auto;
+      text-align: left;
+      max-width: 600px;
+      width: 100%;
+      background: #fff0f5;
+      padding: 1rem;
+      border-radius: 10px;
+      box-sizing: border-box;
+      transition: border 0.3s;
+    }
+
+    .question p {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    label {
+      display: block;
+      padding: 8px 0;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    input[type="radio"] {
+      transform: scale(1.2);
+      margin-right: 8px;
+    }
+
+    .result {
+      margin-top: 30px;
+      font-weight: bold;
+      color: #d40067;
+      font-size: 1.2rem;
+      transition: opacity 0.5s;
+      opacity: 0;
+    }
+
+    .result.show {
+      opacity: 1;
+    }
+
+    button {
+      padding: 14px 24px;
+      background-color: #ff69b4;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      margin-top: 20px;
+      width: 100%;
+      max-width: 400px;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+
+    @media screen and (max-width: 600px) {
+      body {
+        padding: 1rem;
+      }
+
+      button {
+        font-size: 1.1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>あなたの恋愛タイプ診断💘</h1>
+
+  <div id="quiz-container"></div>
+
+  <button id="submit-btn" onclick="showResult(event)">診断する</button>
+
+  <div class="result" id="result"></div>
+
+  <template id="question-template">
+    <div class="question">
+      <p class="question-text"></p>
+      <label><input type="radio" value="A"> <span class="a-text"></span></label>
+      <label><input type="radio" value="B"> <span class="b-text"></span></label>
+    </div>
+  </template>
+
+  <script>
+    const questions = [
+      { text: "Q1: 初対面の相手とは？", a: "積極的に話しかける", b: "少し様子を見る" },
+      { text: "Q2: 理想のデートは？", a: "おしゃれなカフェ", b: "自然の中でのんびり" },
+      { text: "Q3: 恋人との頻度は？", a: "毎日でも会いたい", b: "週1くらいがちょうどいい" },
+      { text: "Q4: 記念日は？", a: "絶対にお祝いしたい", b: "そんなにこだわらない" },
+      { text: "Q5: 喧嘩したら？", a: "すぐ話して解決する", b: "少し距離を置いて冷静になる" },
+      { text: "Q6: 相手の趣味には？", a: "興味がなくても一緒にやってみたい", b: "お互い自由がいい" },
+      { text: "Q7: サプライズは？", a: "大好き！", b: "ちょっと苦手…" },
+      { text: "Q8: 理想の関係は？", a: "いつも一緒がいい", b: "適度な距離感がほしい" },
+      { text: "Q9: 恋人の過去は？", a: "気になる！聞いちゃう", b: "あまり気にしない" },
+      { text: "Q10: 付き合ったら？", a: "相手最優先の生活になる", b: "自分の時間も大切にする" },
+      { text: "Q11: 一緒に住むなら？", a: "すぐ同棲したい", b: "結婚してからでいい" },
+      { text: "Q12: 恋人が忙しいときは？", a: "少し寂しい", b: "気にせず自分の時間を楽しむ" },
+      { text: "Q13: SNSの連絡頻度は？", a: "毎日連絡したい", b: "必要な時だけでOK" },
+      { text: "Q14: 恋人に求めるのは？", a: "愛情表現", b: "安心感" },
+      { text: "Q15: 自分の恋愛観は？", a: "ドラマチックでいたい", b: "安定が大事" },
+      { text: "Q16: 好きになったら？", a: "すぐ行動する", b: "まずは様子をみる" },
+      { text: "Q17: 恋人と趣味が合わない？", a: "新しい楽しみが増えると思う", b: "無理に合わせたくない" },
+      { text: "Q18: 誕生日のプレゼントは？", a: "特別なものを用意する", b: "気持ちが伝われば十分" },
+      { text: "Q19: 将来について？", a: "話し合って決めたい", b: "流れに任せたい" },
+      { text: "Q20: 理想の告白は？", a: "自分からしたい", b: "相手からされたい" }
+    ];
+
+    const container = document.getElementById("quiz-container");
+    const template = document.getElementById("question-template");
+
+    questions.forEach((q, i) => {
+      const clone = template.content.cloneNode(true);
+      clone.querySelector(".question-text").textContent = q.text;
+      clone.querySelector(".a-text").textContent = q.a;
+      clone.querySelector(".b-text").textContent = q.b;
+      const inputs = clone.querySelectorAll('input');
+      inputs.forEach(input => {
+        input.name = `q${i}`;
+        input.addEventListener('change', () => {
+          localStorage.setItem(input.name, input.value);
+        });
+      });
+      container.appendChild(clone);
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      questions.forEach((_, i) => {
+        const saved = localStorage.getItem(`q${i}`);
+        if (saved) {
+          const input = document.querySelector(`input[name="q${i}"][value="${saved}"]`);
+          if (input) input.checked = true;
+        }
+      });
+    });
+
+    function getTypeResult(scoreA, scoreB) {
+      const total = scoreA + scoreB;
+      const percentA = Math.round((scoreA / total) * 100);
+      const percentB = 100 - percentA;
+
+      if (scoreA >= 16) {
+        return {
+          text: `あなたは『超情熱型』恋愛タイプ！🔥<br>情熱的で相手を強く想うタイプです。<br>【Aタイプ：${percentA}% / Bタイプ：${percentB}%】`,
+          match: "癒し系・マイペース型 💆‍♀️"
+        };
+      } else if (scoreB >= 16) {
+        return {
+          text: `あなたは『超マイペース型』恋愛タイプ🍃<br>自分らしさを大切にする大人タイプ。<br>【Aタイプ：${percentA}% / Bタイプ：${percentB}%】`,
+          match: "情熱型・引っ張ってくれるタイプ 🔥"
+        };
+      } else {
+        return {
+          text: `あなたは『バランス型』恋愛タイプ🌈<br>情と理のバランスがとれた理想的な人です。<br>【Aタイプ：${percentA}% / Bタイプ：${percentB}%】`,
+          match: "同じくバランス型 or どちらにも対応できる人 🧡"
+        };
+      }
+    }
+
+    function showResult(event) {
+      const button = event.target;
+      button.disabled = true;
+      setTimeout(() => button.disabled = false, 1000);
+
+      let scoreA = 0;
+      let scoreB = 0;
+      let allAnswered = true;
+      const questionDivs = document.querySelectorAll('.question');
+
+      questions.forEach((_, i) => {
+        const answer = document.querySelector(`input[name="q${i}"]:checked`);
+        const div = questionDivs[i];
+        if (!answer) {
+          div.style.border = "2px solid red";
+          allAnswered = false;
+        } else {
+          div.style.border = "none";
+          if (answer.value === "A") scoreA++;
+          else scoreB++;
+        }
+      });
+
+      if (!allAnswered) {
+        alert("全ての質問に答えてください！");
+        return;
+      }
+
+      const result = getTypeResult(scoreA, scoreB);
+      const resultDiv = document.getElementById("result");
+      resultDiv.innerHTML = `
+        ${result.text}<br><br>
+        💞 あなたと相性が良いのは「<strong>${result.match}</strong>」です！
+      `;
+      resultDiv.classList.add("show");
+    }
+  </script>
+</body>
+</html>
